@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Für Aron</title>
+  <link rel="stylesheet" href="style.css">
+  <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>A</text></svg>"
+    />
+
+</head>
+<body>
+  <canvas id="konfetti" aria-hidden="true"></canvas>
+
+  <main>
+    <button id="knopf" type="button">Drück mich</button>
+
+    <section id="buehne" hidden>
+      <h1>Herzlichen Glückwunsch Aron</h1>
+      <a class="bild" href="https://www.youtube.com/watch?v=xMHJGd3wwZk" target="_blank" rel="noopener">
+        <img src="Screenshot 2026-11-18 005730.jpg.png" alt="Bild für Aron – zum Öffnen klicken">
+      </a>
+    </section>
+  </main>
+
+  <script>
+    const knopf = document.getElementById('knopf');
+    const buehne = document.getElementById('buehne');
+    const canvas = document.getElementById('konfetti');
+    const ctx = canvas.getContext('2d');
+
+    const farben = ['#ffd23f', '#ff5c5c', '#3ddc97', '#fffdf5', '#7ab8ff', '#ff8ad8'];
+    const reduziert = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let teile = [];
+    let laeuft = false;
+    let ende = 0;
+
+    function groesse() {
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = innerWidth * dpr;
+      canvas.height = innerHeight * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    addEventListener('resize', groesse);
+    groesse();
+
+    function neuesTeil(x, y, vx, vy) {
+      return {
+        x, y, vx, vy,
+        b: 6 + Math.random() * 7,
+        h: 4 + Math.random() * 5,
+        r: Math.random() * Math.PI * 2,
+        vr: (Math.random() - 0.5) * 0.35,
+        f: farben[Math.floor(Math.random() * farben.length)]
+      };
+    }
+
+    function explosion(x, y, anzahl) {
+      for (let i = 0; i < anzahl; i++) {
+        const winkel = Math.random() * Math.PI * 2;
+        const tempo = 6 + Math.random() * 12;
+        teile.push(neuesTeil(x, y, Math.cos(winkel) * tempo, Math.sin(winkel) * tempo - 6));
+      }
+    }
+
+    function schritt(zeit) {
+      ctx.clearRect(0, 0, innerWidth, innerHeight);
+
+      // Konfetti-Regen von oben, solange die Zeit läuft
+      if (zeit < ende) {
+        for (let i = 0; i < (reduziert ? 1 : 4); i++) {
+          teile.push(neuesTeil(Math.random() * innerWidth, -10, (Math.random() - 0.5) * 3, 2 + Math.random() * 3));
+        }
+      }
+
+      teile = teile.filter(t => t.y < innerHeight + 30);
+      for (const t of teile) {
+        t.vy += 0.25;
+        t.vx *= 0.985;
+        t.vy *= 0.99;
+        t.x += t.vx;
+        t.y += t.vy;
+        t.r += t.vr;
+        ctx.save();
+        ctx.translate(t.x, t.y);
+        ctx.rotate(t.r);
+        ctx.fillStyle = t.f;
+        ctx.fillRect(-t.b / 2, -t.h / 2, t.b, t.h);
+        ctx.restore();
+      }
+
+      if (teile.length || zeit < ende) {
+        requestAnimationFrame(schritt);
+      } else {
+        laeuft = false;
+      }
+    }
+
+    function konfettiStarten(x, y) {
+      explosion(x, y, reduziert ? 60 : 180);
+      ende = performance.now() + 4000;
+      if (!laeuft) {
+        laeuft = true;
+        requestAnimationFrame(schritt);
+      }
+    }
+
+    knopf.addEventListener('click', () => {
+      const r = knopf.getBoundingClientRect();
+      konfettiStarten(r.left + r.width / 2, r.top + r.height / 2);
+      knopf.hidden = true;
+      buehne.hidden = false;
+    });
+  </script>
+</body>
+</html>
